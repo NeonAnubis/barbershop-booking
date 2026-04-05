@@ -4,6 +4,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+const DB_VERIFY_INTERVAL_MS = 60 * 60 * 1000; // re-check DB at most once per hour
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -52,17 +54,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // On sign-in, populate the token with user data.
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.lastVerified = Date.now();
+        return token;
       }
+
+      // On subsequent requests, periodically verify the user still exists in the DB.
+      const lastVerified = (token.lastVerified as number) ?? 0;
+      const shouldRecheck = Date.now() - lastVerified > DB_VERIFY_INTERVAL_MS;
+
+      if (shouldRecheck) {
+        const exists = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { id: true },
+        });
+
+        // User was deleted or never existed — invalidate the session.
+        if (!exists) {
+          return null as any;
+        }
+
+        token.lastVerified = Date.now();
+      }
+
       return token;
     },
+
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        (session.user as any).role = token.role;
+      // token is null when the jwt callback returned null above.
+      if (!token?.id) {
+        return { ...session, user: undefined as any };
       }
+      session.user.id = token.id as string;
+      (session.user as any).role = token.role;
       return session;
     },
   },

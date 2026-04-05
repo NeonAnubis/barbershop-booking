@@ -31,7 +31,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  // If the session resolves as unauthenticated (e.g. stale JWT whose user was
+  // deleted from the DB), sign out and redirect to login immediately.
+  if (status === "unauthenticated") {
+    signOut({ callbackUrl: "/login" });
+    return null;
+  }
 
   const currentPage = navItems.find((item) => pathname.startsWith(item.href))?.label || "Dashboard";
 
