@@ -5,10 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import useEmblaCarousel from "embla-carousel-react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   Calendar, Users, DollarSign, Package, MessageSquare,
   ChevronLeft, ChevronRight, Star, Check, Scissors,
-  Clock, TrendingUp, Shield, Zap, ArrowRight, Menu, X
+  Clock, TrendingUp, Shield, Zap, ArrowRight, Menu, X,
+  LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +132,8 @@ function useIntersectionObserver(threshold = 0.1) {
 }
 
 export default function LandingPage() {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated" && !!session?.user;
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
@@ -185,16 +189,27 @@ export default function LandingPage() {
             </div>
 
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/login">
-                <Button variant="ghost" className={scrolled ? "text-gray-700" : "text-white hover:bg-white/10"}>
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Get Started Free
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link href="/dashboard">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className={scrolled ? "text-gray-700" : "text-white hover:bg-white/10"}>
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Get Started Free
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             <button
@@ -215,8 +230,19 @@ export default function LandingPage() {
               </a>
             ))}
             <div className="flex flex-col gap-2 pt-3 border-t">
-              <Link href="/login"><Button variant="outline" className="w-full">Sign In</Button></Link>
-              <Link href="/register"><Button className="w-full bg-blue-600">Get Started Free</Button></Link>
+              {isLoggedIn ? (
+                <Link href="/dashboard">
+                  <Button className="w-full bg-blue-600 flex items-center justify-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login"><Button variant="outline" className="w-full">Sign In</Button></Link>
+                  <Link href="/register"><Button className="w-full bg-blue-600">Get Started Free</Button></Link>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -277,17 +303,28 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <Link href="/register">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 text-base h-12">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="border-white/30 text-white bg-white/10 hover:bg-white/20 px-8 text-base h-12">
-                  Sign In to Dashboard
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link href="/dashboard">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 text-base h-12">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Go to Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/register">
+                    <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 text-base h-12">
+                      Start Free Trial
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline" className="border-white/30 text-white bg-white/10 hover:bg-white/20 px-8 text-base h-12">
+                      Sign In to Dashboard
+                    </Button>
+                  </Link>
+                </>
+              )}
             </motion.div>
 
             <motion.div

@@ -15,14 +15,13 @@ export default auth((req) => {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
+  // Only block unauthenticated access to protected routes.
+  // Do NOT redirect logged-in users away from /login here —
+  // the login page server component handles that with a full DB-validated auth() check.
   if (!isLoggedIn && !isPublicPath) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return Response.redirect(loginUrl);
-  }
-
-  if (isLoggedIn && (pathname === "/login" || pathname === "/register")) {
-    return Response.redirect(new URL("/dashboard", req.url));
   }
 });
 
