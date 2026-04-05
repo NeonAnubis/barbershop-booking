@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -32,12 +32,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const signingOut = useRef(false);
 
-  // If the session resolves as unauthenticated (e.g. stale JWT whose user was
-  // deleted from the DB), sign out and redirect to login immediately.
-  if (status === "unauthenticated") {
-    signOut({ callbackUrl: "/login" });
-    return null;
+  useEffect(() => {
+    // If the session resolves as unauthenticated (e.g. stale JWT whose user
+    // was deleted from the DB), sign out once and redirect to login.
+    if (status === "unauthenticated" && !signingOut.current) {
+      signingOut.current = true;
+      signOut({ callbackUrl: "/login" });
+    }
+  }, [status]);
+
+  if (status === "loading" || status === "unauthenticated") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-500">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   const currentPage = navItems.find((item) => pathname.startsWith(item.href))?.label || "Dashboard";

@@ -62,22 +62,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // On subsequent requests, periodically verify the user still exists in the DB.
+      // If there's no user ID in the token, invalidate immediately.
+      if (!token.id) return null as any;
+
+      // Periodically verify the user still exists in the DB.
       const lastVerified = (token.lastVerified as number) ?? 0;
       const shouldRecheck = Date.now() - lastVerified > DB_VERIFY_INTERVAL_MS;
 
       if (shouldRecheck) {
-        const exists = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { id: true },
-        });
+        try {
+          const exists = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true },
+          });
 
-        // User was deleted or never existed — invalidate the session.
-        if (!exists) {
-          return null as any;
+          // User was deleted or never existed — invalidate the session.
+          if (!exists) return null as any;
+
+          token.lastVerified = Date.now();
+        } catch {
+          // DB unreachable — keep the existing token rather than locking everyone out.
         }
-
-        token.lastVerified = Date.now();
       }
 
       return token;
